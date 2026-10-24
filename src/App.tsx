@@ -54,7 +54,6 @@ export default function App() {
   const todaySpent = sumKHR(todayTx, rate, 'expense')
   const monthSpent = monthExpenseKHR(data)
   const balance = availableBalanceKHR(data)
-  const monthIncome = sumKHR(data.transactions.filter(t => t.date.startsWith(monthISO())), rate, 'income')
   const monthSavings = sumKHR(data.transactions.filter(t => t.date.startsWith(monthISO())), rate, 'saving')
   const monthlyLimitKHR = data.budget.monthlyLimitUSD * rate
   const alerts = [
@@ -105,7 +104,7 @@ export default function App() {
     <main className="main">
       <header className="topbar"><div className="topbar-left"><button className="icon-btn mobile-menu" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu/></button><div><div className="breadcrumb">Personal finance <span>/</span> <b>{page}</b></div><h1>{page === 'Dashboard' ? 'Good to see you!' : page}</h1></div></div><div className="top-actions"><div className="currency-switch"><button className={currency === 'KHR' ? 'selected' : ''} onClick={() => setCurrency('KHR')}>៛ KHR</button><button className={currency === 'USD' ? 'selected' : ''} onClick={() => setCurrency('USD')}>$ USD</button></div><div className="alert-wrap"><button className="icon-btn alert-button" onClick={() => setShowAlerts(v => !v)} aria-label="View alerts"><Bell size={19}/>{alerts.length > 0 && <i/>}</button>{showAlerts && <div className="alert-popover"><strong>Budget alerts</strong>{alerts.length ? alerts.map((a,i) => <p key={i}><CircleAlert size={15}/>{a}</p>) : <p className="muted">You're doing well. No alerts right now.</p>}</div>}</div><button className="primary-btn top-add" onClick={() => { setEditing(null); setShowAdd(true) }}><Plus size={17}/> Add transaction</button></div></header>
       <div className="page-content">
-        {page === 'Dashboard' && <Dashboard data={data} currency={currency} rate={rate} todaySpent={todaySpent} monthSpent={monthSpent} balance={balance} monthIncome={monthIncome} monthSavings={monthSavings} onAdd={() => setShowAdd(true)} onPage={setPage} onEdit={t => { setEditing(t); setShowAdd(true) }} />}
+        {page === 'Dashboard' && <Dashboard data={data} currency={currency} rate={rate} todaySpent={todaySpent} monthSpent={monthSpent} balance={balance} monthSavings={monthSavings} onAdd={() => setShowAdd(true)} onPage={setPage} onEdit={t => { setEditing(t); setShowAdd(true) }} />}
         {page === 'Transactions' && <Transactions transactions={filteredTransactions} allCount={data.transactions.length} search={search} setSearch={setSearch} filterType={filterType} setFilterType={setFilterType} filterMonth={filterMonth} setFilterMonth={setFilterMonth} currency={currency} rate={rate} onAdd={() => setShowAdd(true)} onEdit={t => { setEditing(t); setShowAdd(true) }} onDelete={deleteTransaction} />}
         {page === 'Budgets' && <Budgets data={data} update={update} currency={currency} rate={rate} monthSpent={monthSpent} onToast={setToast}/>}
         {page === 'Savings goals' && <Savings data={data} update={update} currency={currency} rate={rate} onToast={setToast} onDelete={deleteGoal}/>}
@@ -123,8 +122,8 @@ export default function App() {
 function StatCard({ label, value, sub, icon: Icon, tone, progress }: { label: string; value: string; sub: string; icon: typeof Wallet; tone: string; progress?: number }) {
   return <div className="stat-card"><div className="stat-top"><span>{label}</span><span className={`stat-icon ${tone}`}><Icon size={18}/></span></div><strong className="stat-value">{value}</strong><div className="stat-sub">{sub}</div>{progress !== undefined && <div className="progress-track"><div className={`progress-fill ${tone}`} style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}/></div>}</div>
 }
-function Dashboard({ data, currency, rate, todaySpent, monthSpent, balance, monthIncome, monthSavings, onAdd, onPage, onEdit }: {
-  data: AppData; currency: Currency; rate: number; todaySpent: number; monthSpent: number; balance: number; monthIncome: number; monthSavings: number; onAdd: () => void; onPage: (p: Page) => void; onEdit: (t: Transaction) => void
+function Dashboard({ data, currency, rate, todaySpent, monthSpent, balance, monthSavings, onAdd, onPage, onEdit }: {
+  data: AppData; currency: Currency; rate: number; todaySpent: number; monthSpent: number; balance: number; monthSavings: number; onAdd: () => void; onPage: (p: Page) => void; onEdit: (t: Transaction) => void
 }) {
   const monthlyLimit = data.budget.monthlyLimitUSD * rate
   const todayPercent = todaySpent / data.budget.dailyLimitKHR * 100
@@ -151,7 +150,7 @@ function Dashboard({ data, currency, rate, todaySpent, monthSpent, balance, mont
     </div>
     <div className="content-grid lower-grid">
       <section className="panel recent-panel"><div className="panel-heading"><div><h3>Recent transactions</h3><p>Your latest money activity</p></div><button className="text-button" onClick={() => onPage('Transactions')}>View all <ArrowUpRight size={14}/></button></div>
-        {recent.length ? <div className="transaction-list">{recent.map(t => <TransactionRow key={t.id} t={t} rate={rate} currency={currency} onEdit={onEdit}/>)}</div> : <Empty icon={ReceiptText} title="No transactions yet" text="Add your first expense or income to get started." action="Add transaction" onAction={onAdd}/>}
+        {recent.length ? <div className="transaction-list">{recent.map(t => <TransactionRow key={t.id} t={t} rate={rate} onEdit={onEdit}/>)}</div> : <Empty icon={ReceiptText} title="No transactions yet" text="Add your first expense or income to get started." action="Add transaction" onAction={onAdd}/>}
       </section>
       <section className="panel categories-panel"><div className="panel-heading"><div><h3>Top spending categories</h3><p>Where your money goes this month</p></div><button className="text-button" onClick={() => onPage('Reports')}>Reports <ArrowUpRight size={14}/></button></div>
         {cat.length ? <><div className="category-chart"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={cat} dataKey="amount" nameKey="name" innerRadius={48} outerRadius={70} paddingAngle={3} stroke="none">{cat.map((_,i)=><Cell key={i} fill={chartColors[i%chartColors.length]}/>)}</Pie><Tooltip formatter={v=>[`៛${Number(v).toLocaleString()}`,'Spent']}/></PieChart></ResponsiveContainer><div className="donut-center"><strong>{money(currency==='KHR'?total:total/rate,currency,rate)}</strong><span>total spent</span></div></div><div className="category-legend">{cat.map((c,i)=><div key={c.name}><span><i style={{background:chartColors[i%chartColors.length]}}/>{c.name}</span><b>{money(currency==='KHR'?c.amount:c.amount/rate,currency,rate)}</b></div>)}</div></> : <Empty icon={ChartNoAxesCombined} title="No spending data" text="Your categories will appear after you record expenses."/>}
@@ -164,7 +163,7 @@ function Dashboard({ data, currency, rate, todaySpent, monthSpent, balance, mont
 function Empty({ icon: Icon, title, text, action, onAction }: { icon: typeof Wallet; title: string; text: string; action?: string; onAction?: () => void }) {
   return <div className="empty-state"><div className="empty-icon"><Icon size={22}/></div><strong>{title}</strong><p>{text}</p>{action && onAction && <button className="secondary-btn" onClick={onAction}>{action}</button>}</div>
 }
-function TransactionRow({ t, rate, currency, onEdit, onDelete }: { t: Transaction; rate: number; currency: Currency; onEdit?: (t: Transaction) => void; onDelete?: (id: string) => void }) {
+function TransactionRow({ t, rate, onEdit, onDelete }: { t: Transaction; rate: number; onEdit?: (t: Transaction) => void; onDelete?: (id: string) => void }) {
   const Icon = categoryIcon[t.category] ?? MoreHorizontal
   const isPositive = t.type === 'income'
   const label = t.type === 'saving' ? 'Savings transfer' : t.category
@@ -178,7 +177,7 @@ function Transactions({ transactions, allCount, search, setSearch, filterType, s
   return <><div className="page-intro"><div><h2>Transaction history</h2><p>Search, filter, and manage your money activity.</p></div><button className="primary-btn" onClick={onAdd}><Plus size={17}/> Add transaction</button></div>
     <div className="stats-grid compact-stats"><StatCard label="Matching records" value={String(transactions.length)} sub={`Of ${allCount} total transactions`} icon={ReceiptText} tone="purple"/><StatCard label="Expenses in view" value={money(currency==='KHR'?total:total/rate,currency,rate)} sub="Based on selected filters" icon={ArrowUpRight} tone="orange"/></div>
     <section className="panel"><div className="filters"><div className="search-field"><Search size={17}/><input placeholder="Search note or category..." value={search} onChange={e=>setSearch(e.target.value)}/></div><select value={filterType} onChange={e=>setFilterType(e.target.value)}><option value="all">All types</option><option value="expense">Expenses</option><option value="income">Income</option><option value="saving">Savings</option></select><input aria-label="Filter month" type="month" value={filterMonth} onChange={e=>setFilterMonth(e.target.value)}/><button className="secondary-btn" onClick={()=>{setSearch('');setFilterType('all');setFilterMonth('')}}>Clear filters</button></div>
-      {transactions.length ? <div className="transaction-list full-list">{transactions.map(t=><TransactionRow key={t.id} t={t} rate={rate} currency={currency} onEdit={onEdit} onDelete={onDelete}/>)}</div> : <Empty icon={Search} title="No matching transactions" text="Try changing your search or filters, or add a new transaction." action="Add transaction" onAction={onAdd}/>}
+      {transactions.length ? <div className="transaction-list full-list">{transactions.map(t=><TransactionRow key={t.id} t={t} rate={rate} onEdit={onEdit} onDelete={onDelete}/>)}</div> : <Empty icon={Search} title="No matching transactions" text="Try changing your search or filters, or add a new transaction." action="Add transaction" onAction={onAdd}/>}
     </section>
   </>
 }
@@ -252,7 +251,7 @@ function Reports({ data, currency, rate, month, setMonth }: { data: AppData; cur
   </>
 }
 
-function SettingsPage({ data, update, onToast, onExport, onImport }: { data: AppData; update:(p:Partial<AppData>)=>void; currency:Currency; rate:number; onToast:(s:string)=>void; onExport:()=>void; onImport:()=>void }) {
+function SettingsPage({ data, update, onToast, onExport, onImport }: { data: AppData; update:(p:Partial<AppData>)=>void; onToast:(s:string)=>void; onExport:()=>void; onImport:()=>void }) {
   const [starting,setStarting]=useState(String(data.startingBalanceUSD))
   const [exchange,setExchange]=useState(String(data.budget.exchangeRate))
   const [daily,setDaily]=useState(String(data.budget.dailyLimitKHR))
